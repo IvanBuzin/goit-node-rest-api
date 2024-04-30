@@ -1,4 +1,4 @@
-import contactsService from "../services/contactsServices.js";
+import contactsServices from "../services/contactsServices.js";
 import {
   createContactSchema,
   updateContactSchema,
@@ -15,7 +15,7 @@ export const getAllContacts = async (req, res, next) => {
 
 export const getOneContact = async (req, res, next) => {
   const { id } = req.params;
-  const contact = await contactsService.getContactById(id);
+  const contact = await contactsServices.getContactById(id);
   try {
     if (contact) {
       res.status(200).send(contact);
@@ -29,7 +29,7 @@ export const getOneContact = async (req, res, next) => {
 
 export const deleteContact = async (req, res, next) => {
   const { id } = req.params;
-  const contact = await contactsService.removeContact(id);
+  const contact = await contactsServices.removeContact(id);
   try {
     if (contact) {
       res.status(200).send(contact);
