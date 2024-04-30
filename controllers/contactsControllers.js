@@ -56,8 +56,8 @@ export const createContact = async (req, res, next) => {
   }
 };
 
-export const updateContact = (req, res) => {
-    const { id } = req.params;
+export const updateContact = async (req, res) => {
+  const { id } = req.params;
   const { name, email, phone } = req.body;
   const { error, value } = updateContactSchema.validate({ name, email, phone });
 
@@ -65,7 +65,7 @@ export const updateContact = (req, res) => {
     return res
       .status(400)
       .send({ message: "Body must have at least one field" });
-     }
+  }
   if (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -81,7 +81,6 @@ export const updateContact = (req, res) => {
     next(error);
   }
 };
-
 
 // http://localhost:3000/api/contacts
 // ttp://localhost:3000/api/contacts/:id
