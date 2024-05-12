@@ -1,87 +1,113 @@
-import contactsServices from "../services/contactsServices.js";
-import {
-  createContactSchema,
-  updateContactSchema,
-} from "../schemas/contactsSchemas.js";
+import HttpError from "../helpers/HttpError.js";
+import Contact from "../models/contact.js";
 
-export const getAllContacts = async (req, res, next) => {
-  const contactsList = await contactsServices.listContacts();
-  try {
-    res.status(200).send(contactsList);
-  } catch (error) {
-    next(error);
-  }
-};
+export async function getAllContacts(req, res, next) {
+  const page = req.query.page || 1;
+  const per_page = req.query.per_page || 12;
+  const skip = (page - 1) * per_page;
+  const favorite = req.query.favorite;
 
-export const getOneContact = async (req, res, next) => {
-  const { id } = req.params;
-  const contact = await contactsServices.getContactById(id);
   try {
-    if (contact) {
-      res.status(200).send(contact);
-    } else {
-      res.status(404).send({ message: "Not found" });
+    const ownerId = { owner: req.user.id };
+
+    let query = Contact.find(ownerId);
+
+    if (favorite === "true") {
+      query = query.where("favorite").equals(true);
     }
+
+    const allContacts = await query.skip(skip).limit(per_page).exec();
+
+    console.log(allContacts);
+    res.status(200).json(allContacts);
   } catch (error) {
     next(error);
   }
-};
+}
 
-export const deleteContact = async (req, res, next) => {
-  const { id } = req.params;
-  const contact = await contactsServices.removeContact(id);
+export async function getOneContact(req, res, next) {
   try {
-    if (contact) {
-      res.status(200).send(contact);
-    } else {
-      res.status(404).send({ message: "Not found" });
+    const { id } = req.params;
+    const oneContact = await Contact.findById(id);
+    if (!oneContact) {
+      throw HttpError(404);
     }
+    if (oneContact.owner.toString() !== req.user.id) {
+      throw HttpError(404);
+    }
+
+    res.status(200).json(oneContact);
   } catch (error) {
     next(error);
   }
-};
+}
 
-export const createContact = async (req, res, next) => {
-  const { name, email, phone } = req.body;
-  const { error, value } = createContactSchema.validate({ name, email, phone });
-  console.log(error);
-  if (typeof error !== "undefined") {
-    return res.status(400).send({ message: "Fields must be filled" });
-  }
+export async function deletedContact(req, res, next) {
   try {
-    const contact = await contactsServices.addContact(name, email, phone);
-    res.status(201).send(contact);
+    const { id } = req.params;
+    const deletedContact = await Contact.findByIdAndDelete(id);
+    if (!deletedContact) {
+      throw HttpError(404);
+    }
+
+    if (deletedContact.owner.toString() !== req.user.id) {
+      throw HttpError(404);
+    }
+
+    res.status(200).json(deletedContact);
   } catch (error) {
     next(error);
   }
-};
+}
 
-export const updateContact = async (req, res) => {
-  const { id } = req.params;
-  const { name, email, phone } = req.body;
-  const { error, value } = updateContactSchema.validate({ name, email, phone });
-
-  if (Object.keys(req.body).length === 0) {
-    return res
-      .status(400)
-      .send({ message: "Body must have at least one field" });
-  }
-  if (error) {
-    return res.status(400).json({ message: error.message });
-  }
-
+export async function createContact(req, res, next) {
+  console.log(req.user);
   try {
-    const result = await contactsServices.updContact(id, req.body);
+    const contact = {
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone,
+      owner: req.user.id,
+    };
+    const newContact = await Contact.create(contact);
+    res.status(201).json(newContact);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateContact(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
     if (!result) {
-      return res.status(404).send({ message: "Not found" });
+      throw HttpError(404);
+    }
+    if (result.owner.toString() !== req.user.id) {
+      throw HttpError(404);
     }
 
-    res.status(200).send(result);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
-};
+}
 
-// http://localhost:3000/api/contacts
-// ttp://localhost:3000/api/contacts/:id
-// {"name": "Ivan", "email": "ua.buzin@gmail.com", "phone":01234567891 }
+export async function updateStatusContact(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+    if (!result) {
+      throw HttpError(404);
+    }
+    if (result.owner.toString() !== req.user.id) {
+      throw HttpError(404);
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
