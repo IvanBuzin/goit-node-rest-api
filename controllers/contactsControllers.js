@@ -1,13 +1,14 @@
-import contactsServices from "../services/contactsServices.js";
+import Contact from "../models/contact.js";
 import {
   createContactSchema,
   updateContactSchema,
+  updateFavoriteSchema,
 } from "../schemas/contactsSchemas.js";
 
 export const getAllContacts = async (req, res, next) => {
-  const contactsList = await contactsServices.listContacts();
   try {
-    res.status(200).send(contactsList);
+    const contacts = await Contact.find();
+    res.status(200).send(contacts);
   } catch (error) {
     next(error);
   }
@@ -15,13 +16,13 @@ export const getAllContacts = async (req, res, next) => {
 
 export const getOneContact = async (req, res, next) => {
   const { id } = req.params;
-  const contact = await contactsServices.getContactById(id);
+
   try {
-    if (contact) {
-      res.status(200).send(contact);
-    } else {
+    const contact = await Contact.findById(id);
+    if (!contact) {
       res.status(404).send({ message: "Not found" });
     }
+    res.status(200).send(contact);
   } catch (error) {
     next(error);
   }
@@ -29,13 +30,13 @@ export const getOneContact = async (req, res, next) => {
 
 export const deleteContact = async (req, res, next) => {
   const { id } = req.params;
-  const contact = await contactsServices.removeContact(id);
+
   try {
-    if (contact) {
-      res.status(200).send(contact);
-    } else {
+    const contact = await Contact.findByIdAndDelete(id);
+    if (!contact) {
       res.status(404).send({ message: "Not found" });
     }
+    res.status(200).send(contact);
   } catch (error) {
     next(error);
   }
@@ -43,35 +44,30 @@ export const deleteContact = async (req, res, next) => {
 
 export const createContact = async (req, res, next) => {
   const { name, email, phone } = req.body;
-  const { error, value } = createContactSchema.validate({ name, email, phone });
-  console.log(error);
-  if (typeof error !== "undefined") {
-    return res.status(400).send({ message: "Fields must be filled" });
-  }
   try {
-    const contact = await contactsServices.addContact(name, email, phone);
+    const { error } = createContactSchema.validate({ name, email, phone });
+    if (error) {
+      return res.status(400).send({ message: "Fields must be filled" });
+    }
+    const contact = await Contact.create({ name, email, phone });
     res.status(201).send(contact);
   } catch (error) {
     next(error);
   }
 };
 
-export const updateContact = async (req, res) => {
+export const updateContact = async (req, res, next) => {
   const { id } = req.params;
   const { name, email, phone } = req.body;
-  const { error, value } = updateContactSchema.validate({ name, email, phone });
-
-  if (Object.keys(req.body).length === 0) {
-    return res
-      .status(400)
-      .send({ message: "Body must have at least one field" });
-  }
-  if (error) {
-    return res.status(400).json({ message: error.message });
-  }
 
   try {
-    const result = await contactsServices.updContact(id, req.body);
+    const { error } = updateContactSchema.validate({ name, email, phone });
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    const result = await Contact.findByIdAndUpdate(id, req.body);
     if (!result) {
       return res.status(404).send({ message: "Not found" });
     }
@@ -82,6 +78,26 @@ export const updateContact = async (req, res) => {
   }
 };
 
-// http://localhost:3000/api/contacts
-// ttp://localhost:3000/api/contacts/:id
-// {"name": "Ivan", "email": "ua.buzin@gmail.com", "phone":01234567891 }
+export const updateStatusContact = async (req, res, next) => {
+  const { id } = req.params;
+  const { favorite } = req.body;
+
+  try {
+    const { error } = updateFavoriteSchema.validate({
+      favorite,
+    });
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    const result = await Contact.findByIdAndUpdate(id, req.body);
+    if (!result) {
+      return res.status(404).send({ message: "Not found" });
+    }
+
+    res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+};
