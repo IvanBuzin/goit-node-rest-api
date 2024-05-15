@@ -1,10 +1,13 @@
 import express from "express";
-import morgan from "morgan";
+import morgan, { compile } from "morgan";
 import cors from "cors";
+import "dotenv/config";
+import "./db/db.js";
 
 import contactsRouter from "./routes/contactsRouter.js";
+import mongoose from "mongoose";
 
-const app = express();
+export const app = express();
 
 app.use(morgan("tiny"));
 app.use(cors());
