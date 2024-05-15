@@ -24,18 +24,6 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message });
 });
 
-async function run() {
-  try {
-    await mongoose.connect(DB_URI);
-    console.info("Database connection successful");
-
-    app.listen(3000, () => {
-      console.log("Server is running. Use our API on port: 3000");
-    });
-  } catch (error) {
-    console.error(error.message);
-    process.emit(1);
-  }
-}
-
-run();
+app.listen(3000, () => {
+  console.log("Server is running. Use our API on port: 3000");
+});
