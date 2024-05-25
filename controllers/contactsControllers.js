@@ -2,15 +2,14 @@ import HttpError from "../helpers/HttpError.js";
 import Contact from "../models/contact.js";
 
 export async function getAllContacts(req, res, next) {
-  const page = req.query.page || 1;
-  const per_page = req.query.per_page || 12;
-  const skip = (page - 1) * per_page;
-  const favorite = req.query.favorite;
-
   try {
+    const { _id: owner } = req.user;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+    const favorite = req.query.favorite;
     const ownerId = { owner: req.user.id };
 
-    let query = Contact.find(ownerId);
+    let query = Contact.find({ owner }, '-createdAtId);
 
     if (favorite === "true") {
       query = query.where("favorite").equals(true);
