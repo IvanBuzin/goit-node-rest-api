@@ -2,7 +2,7 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import express from "express";
 import cors from "cors";
-import { authMiddleware } from "./helpers/authmiddleware.js";
+import { authMiddleware } from "./helpers/validateId.js";
 import contactRouter from "./routes/contactRouter.js";
 import userRouter from "./routes/authRouter.js";
 

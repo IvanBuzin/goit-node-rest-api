@@ -1,76 +1,96 @@
+import { not } from "joi";
 import HttpError from "../helpers/HttpError.js";
 import User from "../models/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-export async function userRegistration(req, res, next) {
-  const { email, password } = req.body;
+export const register = async (req, res, next) => {
   try {
+    const { email, password } = req.body;
     const user = await User.findOne({ email });
-
-    if (user !== null) {
+    if (user) {
       throw HttpError(409, "Email in use");
     }
-    const hashPassword = await bcrypt.hash(password, 10);
-    await User.create({ email, password: hashPassword });
 
-    res.status(201).send({ message: "Registration succesfully" });
+    const hashPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({ ...req.body, password: hashPassword });
+    res.status(201).json({
+      user: {
+        email: newUser.email,
+        subscription: newUser.subscription,
+      },
+    });
   } catch (error) {
     next(error);
   }
-}
+};
 
-export async function userLogin(req, res, next) {
-  const { email, password } = req.body;
-
+export const login = async (req, res, next) => {
   try {
+    const { email, password } = req.body;
     const user = await User.findOne({ email });
 
-    if (user === null) {
-      throw HttpError(401, "Email or password is incorrect");
+    if (!user) {
+      throw HttpError(401, "Email or password is wrong");
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const passwordCompare = await bcrypt.compare(password, user.password);
 
-    if (isMatch === false) {
-      throw HttpError(401, "Email or password is incorrect");
+    if (!passwordCompare) {
+      throw HttpError(401, "Email or password is wrong");
     }
 
-    const userInfo = {
-      id: user._id,
-      email: user.email,
-    };
-
-    const token = jwt.sign(userInfo, process.env.JWT_KEY, { expiresIn: "1h" });
-
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "23h",
+    });
     await User.findByIdAndUpdate(user._id, { token });
 
-    res.status(200).send(token);
+    res.status(200).json({
+      token,
+      user: {
+        email: user.email,
+        subscription: user.subscription,
+      },
+    });
   } catch (error) {
     next(error);
   }
-}
+};
 
-export async function userLogout(req, res, next) {
+export const current = async (req, res) => {
+  const { email, subscription } = req.user;
+
+  res.json({ email, subscription });
+};
+
+export const logout = async (req, res, next) => {
+  const { _id } = req.user;
   try {
-    await User.findByIdAndUpdate(req.user.id, { token: null });
+    await User.findByIdAndUpdate(_id, { token: "" });
 
     res.status(204).end();
   } catch (error) {
     next(error);
   }
-}
+};
 
-export async function userByToken(req, res, next) {
-  const { id } = req.user;
+export const updateSubscription = async (req, res, next) => {
+  const { id } = req.params;
+  const { subscription } = req.body;
+
   try {
-    const currentUser = await User.findById(id);
+    const user = await User.findByIdAndUpdate(id, { subscription });
 
-    if (!currentUser) {
-      throw HttpError(401);
+    if (!user) {
+      throw HttpError(404);
     }
-    res.status(200).send(currentUser);
+
+    if (subscription === user.subscription) {
+      throw HttpError(409, "User already has this subscription");
+    }
+
+    res.json({ message: "Subscription updated successfully" });
   } catch (error) {
     next(error);
   }
-}
+};
