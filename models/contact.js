@@ -1,3 +1,4 @@
+import { required } from "joi";
 import { Schema, model } from "mongoose";
 
 const contactSchema = new Schema(
@@ -19,10 +20,12 @@ const contactSchema = new Schema(
     owner: {
       type: Schema.Types.ObjectId,
       ref: "user",
+      required: true,
     },
   },
   {
     versionKey: false,
+    timestamps: true,
   }
 );
 
