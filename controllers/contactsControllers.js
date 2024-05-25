@@ -1,87 +1,89 @@
-import contactsServices from "../services/contactsServices.js";
-import {
-  createContactSchema,
-  updateContactSchema,
-} from "../schemas/contactsSchemas.js";
+import HttpError from "../helpers/HttpError.js";
+import Contact from "../models/contact.js";
 
 export const getAllContacts = async (req, res, next) => {
-  const contactsList = await contactsServices.listContacts();
   try {
-    res.status(200).send(contactsList);
+    const { _id: owner } = req.user;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const result = await Contact.find({ owner }, "-createdAt", { skip, limit });
+    res.json(result);
   } catch (error) {
     next(error);
   }
 };
 
 export const getOneContact = async (req, res, next) => {
-  const { id } = req.params;
-  const contact = await contactsServices.getContactById(id);
+  const { id: _id } = req.params;
+  const { id: owner } = req.user;
   try {
-    if (contact) {
-      res.status(200).send(contact);
-    } else {
-      res.status(404).send({ message: "Not found" });
+    const result = await Contact.findOne({ _id, owner });
+    if (!result) {
+      throw HttpError(404);
     }
+
+    res.json(result);
   } catch (error) {
     next(error);
   }
 };
 
 export const deleteContact = async (req, res, next) => {
-  const { id } = req.params;
-  const contact = await contactsServices.removeContact(id);
+  const { id: _id } = req.params;
+  const { _id: owner } = req.user;
   try {
-    if (contact) {
-      res.status(200).send(contact);
-    } else {
-      res.status(404).send({ message: "Not found" });
+    const result = await Contact.findOneAndDelete({ _id, owner });
+    if (!result) {
+      throw HttpError(404);
     }
+
+    res.json(result);
   } catch (error) {
     next(error);
   }
 };
 
 export const createContact = async (req, res, next) => {
-  const { name, email, phone } = req.body;
-  const { error, value } = createContactSchema.validate({ name, email, phone });
-  console.log(error);
-  if (typeof error !== "undefined") {
-    return res.status(400).send({ message: "Fields must be filled" });
-  }
+  const { _id: owner } = req.user;
   try {
-    const contact = await contactsServices.addContact(name, email, phone);
-    res.status(201).send(contact);
+    const result = await Contact.create({ ...req.body, owner });
+    res.status(201).json(result);
   } catch (error) {
     next(error);
   }
 };
 
-export const updateContact = async (req, res) => {
-  const { id } = req.params;
-  const { name, email, phone } = req.body;
-  const { error, value } = updateContactSchema.validate({ name, email, phone });
-
-  if (Object.keys(req.body).length === 0) {
-    return res
-      .status(400)
-      .send({ message: "Body must have at least one field" });
-  }
-  if (error) {
-    return res.status(400).json({ message: error.message });
-  }
-
+export const updateContact = async (req, res, next) => {
+  const { id: _id } = req.params;
+  const { _id: owner } = req.user;
   try {
-    const result = await contactsServices.updContact(id, req.body);
+    const result = await Contact.findOneAndUpdate({ _id, owner }, req.body, {
+      new: true,
+    });
     if (!result) {
-      return res.status(404).send({ message: "Not found" });
+      throw HttpError(404);
     }
 
-    res.status(200).send(result);
+    res.json(result);
   } catch (error) {
     next(error);
   }
 };
 
-// http://localhost:3000/api/contacts
-// ttp://localhost:3000/api/contacts/:id
-// {"name": "Ivan", "email": "ua.buzin@gmail.com", "phone":01234567891 }
+export const updateStatusContact = async (req, res, next) => {
+  const { id: _id } = req.params;
+  const { _id: owner } = req.user;
+  try {
+    const result = await Contact.findOneAndUpdate({ _id, owner }, req.body, {
+      new: true,
+    });
+    if (!result) {
+      throw HttpError(404);
+    }
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
