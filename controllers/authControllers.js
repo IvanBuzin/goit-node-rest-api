@@ -112,9 +112,9 @@ export const addAvatar = async (req, res, next) => {
     const { path: filePath, filename } = req.file;
 
     const image = await Jimp.read(filePath);
-    image.resize(250, 250).write(filePath);
+    await image.resize(250, 250).writeAsync(filePath);
 
-    const resultDir = `public/avatars/${filename}`;
+    const resultDir = path.resolve(`public/avatars/${filename}`);
     await fs.rename(filePath, resultDir);
 
     const avatarURL = `/avatars/${filename}`;
