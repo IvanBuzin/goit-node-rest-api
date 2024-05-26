@@ -9,14 +9,9 @@ import Jimp from "jimp";
 import gravatar from "gravatar";
 import { verify } from "node:crypto";
 
-const { JWT_SECRET, BASE_URL } = process.env;
+const { JWT_SECRET } = process.env;
 
 export const register = async (req, res, next) => {
-  const verifyEmail = {
-    to: email,
-    subject: "Verify email",
-    html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
-  };
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
@@ -34,6 +29,11 @@ export const register = async (req, res, next) => {
       avatarURL,
       verificationToken,
     });
+    const verifyEmail = {
+      to: email,
+      subject: "Verify email",
+      html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
+    };
 
     await mail.sendMail(verifyEmail);
 
@@ -79,7 +79,11 @@ export const resendVerifyEmail = async (req, res, next) => {
     if (user.verify) {
       throw HttpError(401, "Email already verify");
     }
-
+    const verifyEmail = {
+      to: email,
+      subject: "Verify email",
+      html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
+    };
     await mail.sendMail(verifyEmail);
     res.json({ message: "Verification email sent" });
   } catch (error) {
