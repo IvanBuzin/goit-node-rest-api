@@ -8,12 +8,21 @@ import fs from "node:fs/promises";
 import Jimp from "jimp";
 import gravatar from "gravatar";
 
-const { JWT_SECRET, BASE_URL } = process.env;
+const { JWT_SECRET } = process.env;
+
+const createVerifyEmail = (email, verificationToken) => {
+  return {
+    to: email,
+    subject: "Verify email",
+    html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
+  };
+};
 
 export const register = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
+
     if (user) {
       throw HttpError(409, "Email in use");
     }
@@ -28,11 +37,7 @@ export const register = async (req, res, next) => {
       verificationToken,
     });
 
-    const verifyEmail = {
-      to: email,
-      subject: "Verify email",
-      html: `<a target="_blank" href="${BASE_URL}/users/verify/${verificationToken}">Click verify email</a>`,
-    };
+    const verifyEmail = createVerifyEmail(email, verificationToken);
     await mail.sendMail(verifyEmail);
 
     res.status(201).json({
@@ -78,13 +83,9 @@ export const resendVerifyEmail = async (req, res, next) => {
       throw HttpError(401, "Email already verify");
     }
 
-    const verifyEmail = {
-      to: email,
-      subject: "Verify email",
-      html: `<a target="_blank" href="${BASE_URL}/users/verify/${user.verificationToken}">Click verify email</a>`,
-    };
-
+    const verifyEmail = createVerifyEmail(email, verificationToken);
     await mail.sendMail(verifyEmail);
+
     res.json({ message: "Verification email sent" });
   } catch (error) {
     next(error);
@@ -174,9 +175,9 @@ export const addAvatar = async (req, res, next) => {
     const { path: filePath, filename } = req.file;
 
     const image = await Jimp.read(filePath);
-    image.resize(250, 250).write(filePath);
+    await image.resize(250, 250).writeAsync(filePath);
 
-    const resultDir = `public/avatars/${filename}`;
+    const resultDir = path.resolve(`public/avatars/${filename}`);
     await fs.rename(filePath, resultDir);
 
     const avatarURL = `/avatars/${filename}`;
