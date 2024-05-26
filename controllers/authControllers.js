@@ -7,9 +7,16 @@ import jwt from "jsonwebtoken";
 import fs from "node:fs/promises";
 import Jimp from "jimp";
 import gravatar from "gravatar";
-import { verify } from "node:crypto";
 
 const { JWT_SECRET } = process.env;
+
+const createVerifyEmail = (email, verificationToken) => {
+  return {
+    to: email,
+    subject: "Verify email",
+    html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
+  };
+};
 
 export const register = async (req, res, next) => {
   try {
@@ -29,12 +36,8 @@ export const register = async (req, res, next) => {
       avatarURL,
       verificationToken,
     });
-    const verifyEmail = {
-      to: email,
-      subject: "Verify email",
-      html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
-    };
 
+    const verifyEmail = createVerifyEmail(email, verificationToken);
     await mail.sendMail(verifyEmail);
 
     res.status(201).json({
@@ -79,12 +82,10 @@ export const resendVerifyEmail = async (req, res, next) => {
     if (user.verify) {
       throw HttpError(401, "Email already verify");
     }
-    const verifyEmail = {
-      to: email,
-      subject: "Verify email",
-      html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
-    };
+
+    const verifyEmail = createVerifyEmail(email, verificationToken);
     await mail.sendMail(verifyEmail);
+
     res.json({ message: "Verification email sent" });
   } catch (error) {
     next(error);
