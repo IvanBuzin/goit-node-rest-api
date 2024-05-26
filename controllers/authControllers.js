@@ -7,13 +7,20 @@ import jwt from "jsonwebtoken";
 import fs from "node:fs/promises";
 import Jimp from "jimp";
 import gravatar from "gravatar";
+import { verify } from "node:crypto";
 
 const { JWT_SECRET, BASE_URL } = process.env;
 
 export const register = async (req, res, next) => {
+  const verifyEmail = {
+    to: email,
+    subject: "Verify email",
+    html: `<a target="_blank" href="http://localhost:3000/api/users/verify/${verificationToken}">Click verify email</a>`,
+  };
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
+
     if (user) {
       throw HttpError(409, "Email in use");
     }
@@ -28,11 +35,6 @@ export const register = async (req, res, next) => {
       verificationToken,
     });
 
-    const verifyEmail = {
-      to: email,
-      subject: "Verify email",
-      html: `<a target="_blank" href="${BASE_URL}/users/verify/${verificationToken}">Click verify email</a>`,
-    };
     await mail.sendMail(verifyEmail);
 
     res.status(201).json({
@@ -77,12 +79,6 @@ export const resendVerifyEmail = async (req, res, next) => {
     if (user.verify) {
       throw HttpError(401, "Email already verify");
     }
-
-    const verifyEmail = {
-      to: email,
-      subject: "Verify email",
-      html: `<a target="_blank" href="${BASE_URL}/users/verify/${user.verificationToken}">Click verify email</a>`,
-    };
 
     await mail.sendMail(verifyEmail);
     res.json({ message: "Verification email sent" });
